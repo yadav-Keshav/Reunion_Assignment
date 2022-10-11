@@ -1,7 +1,8 @@
 const mongoose = require('mongoose')
+const User=require('./userModel');
 const { ObjectId } = mongoose.Schema.Types
 const postSchema = new mongoose.Schema({
-    title: {
+    text: {
         type: String,
     },
     desc: {

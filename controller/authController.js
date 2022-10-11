@@ -1,7 +1,7 @@
 const User = require('../model/userModel');
 const jwt = require('jsonwebtoken');
 const createError = require('../error');
-exports.login = async (req, res, next) => {
+exports.login = (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -26,7 +26,7 @@ exports.login = async (req, res, next) => {
 
 
 
-exports.register = async (req, res, next) => {
+exports.register = (req, res, next) => {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
         return next(createError(401, "Please fill all required fields"));
@@ -37,11 +37,12 @@ exports.register = async (req, res, next) => {
             return next(createError(401, 'User already register'));
         }
         else {
-            User.create({ name, email, password, token }, (err, user) => {
+            User.create({ name, email, password }, (err, user) => {
                 if (user) {
                     return res.status(200).json({ message: "Sucessfully Created" });
                 }
                 else {
+                    console.log(err.message)
                     return next(createError(401, err.message));
                 }
             })

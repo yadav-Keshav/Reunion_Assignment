@@ -1,16 +1,16 @@
 const createError = require('../error');
 const Post = require('../model/postModel');
 exports.createPost = (req, res, next) => {
-    const { title, desc } = req.body
-    if (!title || !desc) {
+    const { text, desc } = req.body
+    if (!text || !desc) {
         return res.status(422).json({ error: "Plase Enter all required fields" })
     }
     const post = new Post({
-        title,
+        text,
         desc,
-        postedBy: { id: req.user._id }
+        postedBy: req.user._id
     });
-    post.save()
+    post.save(post)
         .then(result => {
             res.status(200).json({ post: result })
         })
@@ -21,47 +21,67 @@ exports.createPost = (req, res, next) => {
 
 exports.deletePost = (req, res, next) => {
     const id = req.params.id;
-    Post.findById(id, (err, doc) => {
-        if (err) {
-            return next(createError(401, err.message));
+    Post.findById(id, (err, result) => {
+        if (!result) {
+            return next(createError(401, "Post not found"));
         }
-        if (doc.postedBy.id.toString() === req.user._id.toString()) {
-            doc.remove()
-                .then(result => {
+        if (result.postedBy.toString() === req.user._id.toString()) {
+            result.remove()
+                .then(() => {
                     return res.status(200).json({ message: 'Sucesfully deleted' })
                 })
                 .catch(err => {
                     return next(createError(401, err.message));
                 })
         }
-        return next(createError(401, "Cannot be deleted"));
+        else {
+            return next(createError(401, "Cannot be deleted"));
+        }
     })
 }
 
 exports.likePost = (req, res, next) => {
     const id = req.params.id;
-    User.findByIdAndUpdate(id, { $push: { likes: req.user._id } }, { new: true }, (err, result) => {
+    Post.findById(id, (err, result) => {
         if (err) {
             return next(createError(401, err.message));
         }
-        return res.status(200).json({ message: "Sucessful" })
+        if (!result.likes.includes(req.user._id)) {
+            result.likes.push(req.user._id);
+        }
+        result.save()
+            .then(() => {
+                return res.status(200).json({ message: "Sucessful" })
+            })
+            .catch(err => {
+                return next(createError(401, err.message));
+            })
     })
 }
 
 exports.unLikePost = (req, res, next) => {
     const id = req.params.id;
-    User.findByIdAndUpdate(id, { $pop: { likes: req.user._id } }, { new: true }, (err, result) => {
+    Post.findById(id, (err, result) => {
         if (err) {
             return next(createError(401, err.message));
         }
-        return res.status(200).json({ message: "Sucessful" })
+        if (result.likes.includes(req.user._id)) {
+            result.likes.pop(req.user._id);
+        }
+        result.save()
+            .then(() => {
+                return res.status(200).json({ message: "Sucessful" })
+            })
+            .catch(err => {
+                return next(createError(401, err.message));
+            })
     })
 }
 
 exports.comment = (req, res, next) => {
     const id = req.params.id;
     const { text } = req.body;
-    User.findByIdAndUpdate(id, { $push: { comments: { text, postedBy: req.user._id } } }, { new: true }, (err, result) => {
+    Post.findByIdAndUpdate(id, { $push: { comments: { text, postedBy: req.user._id } } }, { new: true }, (err, result) => {
         if (err) {
             return next(createError(401, err.message));
         }
@@ -71,26 +91,26 @@ exports.comment = (req, res, next) => {
 
 exports.getPostById = (req, res, next) => {
     const id = req.params.id;
-    User.findById(id, (err, doc) => {
-        if (err) {
-            return next(createError(401, err.message));
+    Post.findById(id, (err, doc) => {
+        if (!doc) {
+            return next(createError(401, "Post not found"));
         }
-        return res.status(200).json({ _id: doc._id, noOfLikes: doc.likes.size(), comments: doc.comments })
+        return res.status(200).json({ _id: doc._id, noOfLikes: doc.likes.length, comments: doc.comments })
     })
 }
 
 exports.getAllPost = (req, res, next) => {
-    User.find({ postedBy: req.user._id }, (err, res) => {
+    Post.find({ postedBy: req.user._id }, (err, result) => {
         if (err) {
             return next(createError(401, err.message));
         }
-        const data = res.map(x => {
+        const posts = result.map(data => {
             return {
-                id: x._id, title: x.title, desc: x.desc,
-                created_at: x.crecreatedAt, comments: x.comments, likes: x.likes.size()
+                id: data._id, title: data.title, desc: data.desc,
+                created_at: data.crecreatedAt, comments: data.comments, likes: data.likes.length
             }
         })
-        data.sort(function (a, b) { return a.created_at - b.created_at })
-        return res.status(200).json({ data });
+        posts.sort(function (a, b) { return b.created_at-a.created_at })
+        return res.status(200).json({ posts });
     })
 }

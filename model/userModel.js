@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { isEmail } = require('validator');
+const bcrypt = require('bcrypt');
 const ObjectId = mongoose.Types.ObjectId;
 const userSchema = new mongoose.Schema({
     name: {
