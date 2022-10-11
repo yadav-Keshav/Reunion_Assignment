@@ -13,6 +13,9 @@ app.use(cors());
 connectDB();
 
 //Api endPoint
+app.get("/",(req,res)=>{
+    res.status(200).json({message:'Server is running'})
+})
 app.use("/api", router);
 // middleware for handling error
 app.use((err, req, res, next) => {
